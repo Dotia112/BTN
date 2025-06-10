@@ -1,9 +1,9 @@
 ../Core/Src/main.c:116:5:main	8	static
-../Core/Src/main.c:209:6:SystemClock_Config	72	static
-../Core/Src/main.c:246:13:MX_I2C1_Init	8	static
-../Core/Src/main.c:280:13:MX_GPIO_Init	32	static
-../Core/Src/main.c:321:6:StartDefaultTask	16	static
-../Core/Src/main.c:339:6:buttonTask	24	static
-../Core/Src/main.c:374:6:ledTask	24	static
-../Core/Src/main.c:402:6:lcdTask	48	static
-../Core/Src/main.c:452:6:Error_Handler	4	static,ignoring_inline_asm
+../Core/Src/main.c:210:6:SystemClock_Config	72	static
+../Core/Src/main.c:247:13:MX_I2C1_Init	8	static
+../Core/Src/main.c:281:13:MX_GPIO_Init	32	static
+../Core/Src/main.c:322:6:StartDefaultTask	16	static
+../Core/Src/main.c:340:6:buttonTask	24	static
+../Core/Src/main.c:369:6:ledTask	24	static
+../Core/Src/main.c:397:6:lcdTask	40	static
+../Core/Src/main.c:440:6:Error_Handler	4	static,ignoring_inline_asm

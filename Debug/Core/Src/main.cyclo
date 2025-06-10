@@ -1,9 +1,9 @@
 main.c:116:5:main	1
-main.c:209:6:SystemClock_Config	3
-main.c:246:13:MX_I2C1_Init	2
-main.c:280:13:MX_GPIO_Init	1
-main.c:321:6:StartDefaultTask	1
-main.c:339:6:buttonTask	3
-main.c:374:6:ledTask	2
-main.c:402:6:lcdTask	3
-main.c:452:6:Error_Handler	1
+main.c:210:6:SystemClock_Config	3
+main.c:247:13:MX_I2C1_Init	2
+main.c:281:13:MX_GPIO_Init	1
+main.c:322:6:StartDefaultTask	1
+main.c:340:6:buttonTask	4
+main.c:369:6:ledTask	2
+main.c:397:6:lcdTask	4
+main.c:440:6:Error_Handler	1

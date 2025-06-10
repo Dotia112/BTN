@@ -50,7 +50,7 @@ I2C_HandleTypeDef hi2c1;
 osThreadId_t defaultTaskHandle;
 
 osSemaphoreId_t buttonSemaphoreHandle;
-
+osSemaphoreId_t prevSemaphoreHandle;
 
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
@@ -156,6 +156,7 @@ int main(void)
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   buttonSemaphoreHandle = osSemaphoreNew(1, 0, &buttonSemaphore_attributes);
+  prevSemaphoreHandle = osSemaphoreNew(1, 1, NULL);
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
@@ -338,38 +339,32 @@ void StartDefaultTask(void *argument)
 /* USER CODE END Header_StartTask02 */
 void buttonTask(void *argument)
 {
-    uint8_t last_state = GPIO_PIN_RESET; // предполагаем, что кнопка не нажата
+    uint8_t last_state = GPIO_PIN_RESET; // Исходное состояние - кнопка отпущена
+
     for(;;)
     {
-
-
         uint8_t current_state = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_14);
-        HD44780_SetCursor(1,3);
 
-           	 if(current_state == 1){
+        // Обновление информации на дисплее
+        HD44780_SetCursor(13,3);
+        HD44780_PrintStr((current_state == GPIO_PIN_SET) ? "0" : "1");
 
-           		HD44780_PrintStr("0");
-
-
-           	 }else {
-
-           		HD44780_PrintStr("1");
-
-           	 }
-
-
-
-        if(current_state == RESET)
+        // Обработка изменения состояния
+        if(current_state != last_state)
         {
+            if(current_state == GPIO_PIN_SET)
+            {
+                osSemaphoreRelease(buttonSemaphoreHandle);
+            }
+
             last_state = current_state;
-            osSemaphoreRelease(buttonSemaphoreHandle); // сигнал об изменении состояния
-
-
-
         }
-        osDelay(10);
+
+
+        osDelay(10); // Задержка для стабильности опроса
     }
 }
+
 
 void ledTask(void *argument)
 {
@@ -401,48 +396,41 @@ void ledTask(void *argument)
 
 void lcdTask(void *argument)
 {
-    uint8_t prev_state = 0xFF;
-    for(;;)
-    {
-        // Ждем семафор с таймаутом 100 мс
-        if(osSemaphoreAcquire(buttonSemaphoreHandle, portMAX_DELAY) == osOK)
-        {
-           // получили сигнал об изменении, читаем актуальное состояние кнопки
+	for(;;)
+	{
+	    if(osSemaphoreAcquire(buttonSemaphoreHandle, portMAX_DELAY) == osOK)
+	    {
+	        if(osSemaphoreAcquire(prevSemaphoreHandle, 0) == osOK)
+	        {
+	            // Запускаем отсчет
+	            int time = 5;
+	            char buffer[20];
 
-        	int time = 5;
-        	        	char buffer[20];
+	            HD44780_Clear();
+	            HD44780_PrintStr("door will be");
+	            HD44780_SetCursor(0,1);
 
-        	        	HD44780_Clear();
-        	        	HD44780_PrintStr("door will be");
-        	        	HD44780_SetCursor(0,1);
+	            for (; time > 0; time--) {
+	                HD44780_Clear();
+	                HD44780_SetCursor(0,0);
+	                HD44780_PrintStr("door will be");
+	                HD44780_SetCursor(0,1);
+	                sprintf(buffer, "close in: %d", time);
+	                HD44780_PrintStr(buffer);
+	                osDelay(900);
+	            }
 
-        	        	for (; time > 0; time--) {
-        	            	HD44780_Clear();
-        	                HD44780_SetCursor(0,0);
-        	            	HD44780_PrintStr("door will be");
-        	            	HD44780_SetCursor(0,1);
-        	                sprintf(buffer, "close in: %d", time);
-        	                HD44780_PrintStr(buffer);
-                            osDelay(900);
-        	        	}
+	            HD44780_Clear();
+	            HD44780_SetCursor(0,0);
+	            HD44780_PrintStr("BTN don't press");
 
+	            // Освобождаем prevSemaphoreHandle после отсчета
+	            osSemaphoreRelease(prevSemaphoreHandle);
+	        }
+	    }
+	    osDelay(50);
+	}
 
-
-        	            osSemaphoreRelease(buttonSemaphoreHandle);
-
-
-        	            HD44780_Clear();
-        	            HD44780_SetCursor(0,0);
-        	            HD44780_PrintStr("BTN dont't press");
-
-
-
-
-
-        }
-
-        osDelay(50);
-    }
 }
 
 /**
