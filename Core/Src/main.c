@@ -63,7 +63,7 @@ osThreadId_t BTNTaskHandle;
 const osThreadAttr_t BTNTask_attributes = {
   .name = "BTNTask",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for LCDTask */
 osThreadId_t LCDTaskHandle;
@@ -77,13 +77,13 @@ osThreadId_t holdLEDHandle;
 const osThreadAttr_t holdLED_attributes = {
   .name = "holdLED",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityBelowNormal,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 osThreadId_t holdSwitchHandle;
 const osThreadAttr_t SwitchTask_attributes = {
   .name = "LCDTaskSwitch",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
 
@@ -191,7 +191,7 @@ int main(void)
 
   /* creation of holdLED */
   holdLEDHandle = osThreadNew(lcdTaskBTN, NULL, &holdLED_attributes);
-  holdSwitchHandle = osThreadNew(LCDTaskSwitch, NULL, &holdLED_attributes);
+  holdSwitchHandle = osThreadNew(LCDTaskSwitch, NULL, &SwitchTask_attributes);
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -361,11 +361,50 @@ void buttonTask(void *argument)
     uint8_t last_stateBTN = GPIO_PIN_RESET;
     for(;;)
     {
+
         uint8_t current_stateSwitch = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_15);
         uint8_t current_stateBTN = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_14);
         // Устанавливаем курсор на нужную позицию (пример: 13-й столбец, 3-я строка)
 
         HD44780_SetCursor(0,1);
+
+        switch(osSemaphoreGetCount(switchSemaphoreHandle)){
+case 0:
+
+	HD44780_PrintStr("0");
+	break;
+
+case 1:
+
+	HD44780_PrintStr("1");
+	break;
+
+default:
+
+	HD44780_PrintStr("x");
+	break;
+
+}
+
+        switch(osSemaphoreGetCount(buttonSemaphoreHandle)){
+   case 0:
+
+   	HD44780_PrintStr("0");
+   	break;
+
+   case 1:
+
+   	HD44780_PrintStr("1");
+   	break;
+
+   default:
+
+   	HD44780_PrintStr("x");
+   	break;
+
+   }
+        HD44780_PrintStr("-");
+
 
         if(current_stateSwitch == GPIO_PIN_SET)
         {
@@ -409,9 +448,7 @@ void buttonTask(void *argument)
 
                     last_stateBTN = current_stateBTN;
                 }
-                HD44780_PrintStr(switchSemaphoreHandle);
 
-                HD44780_PrintStr(buttonSemaphoreHandle);
 
         osDelay(50); // Задержка для стабильности опроса
     }
@@ -421,10 +458,11 @@ void LCDTaskSwitch(void *argument)
 {
 	for(;;)
 		{
+		HD44780_SetCursor(13,1);
+		HD44780_PrintStr("AAA");
 		    if(osSemaphoreAcquire(switchSemaphoreHandle, portMAX_DELAY) == osOK)
 		    {
-		        if(osSemaphoreAcquire(prevSemaphoreHandle, portMAX_DELAY) == osOK)
-		        {
+
 
 		           HD44780_Clear();
 		            HD44780_SetCursor(0,0);
@@ -432,10 +470,11 @@ void LCDTaskSwitch(void *argument)
 	                osDelay(2000);
 
 		            // Освобождаем prevSemaphoreHandle после отсчета
-		            osSemaphoreRelease(prevSemaphoreHandle);
-		        }
+		            osSemaphoreRelease(switchSemaphoreHandle);
+
 		    }
 		    osDelay(50);
+		    HD44780_PrintStr("BBB");
 		}
 }
 
@@ -444,7 +483,7 @@ void ledTask(void *argument)
     uint8_t led_on = 0;
     for(;;)
     {
-        // Ждем семафор с таймаутом 100 мс
+      /*  // Ждем семафор с таймаутом 100 мс
         if(osSemaphoreAcquire(buttonSemaphoreHandle, 100) == osOK)
         {
             // получили сигнал об изменении, читаем актуальное состояние кнопки
@@ -463,7 +502,7 @@ void ledTask(void *argument)
         {
             led_on = !led_on;
             HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, (led_on) ? GPIO_PIN_RESET : GPIO_PIN_SET);
-        }
+        }*/
     }
     osDelay(50);
 }
@@ -472,10 +511,11 @@ void lcdTaskBTN(void *argument)
 {
 	for(;;)
 	{
+
+
 	    if(osSemaphoreAcquire(buttonSemaphoreHandle, portMAX_DELAY) == osOK)
 	    {
-	        if(osSemaphoreAcquire(prevSemaphoreHandle, portMAX_DELAY) == osOK)
-	        {
+
 
 	           HD44780_Clear();
 	            HD44780_SetCursor(0,0);
@@ -484,7 +524,7 @@ void lcdTaskBTN(void *argument)
 
 	            // Освобождаем prevSemaphoreHandle после отсчета
 	            osSemaphoreRelease(prevSemaphoreHandle);
-	        }
+
 	    }
 	    osDelay(50);
 	}
