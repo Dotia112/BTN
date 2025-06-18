@@ -96,10 +96,21 @@ void HD44780_Init(uint8_t rows)
 
 void HD44780_Clear()
 {
+
   SendCommand(LCD_CLEARDISPLAY);
   DelayUS(2000);
 }
+void HD44780_ClearRow(uint8_t row)
+{
+    HD44780_SetCursor(0, row);  // Перемещаем курсор в начало строки
 
+    // Заполняем строку пробелами (предполагая 16 символов в строке)
+    for(uint8_t i = 0; i < 16; i++) {
+        SendChar(' ');
+    }
+
+    HD44780_SetCursor(0, row);  // Возвращаем курсор в начало строки
+}
 void HD44780_Home()
 {
   SendCommand(LCD_RETURNHOME);

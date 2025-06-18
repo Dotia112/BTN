@@ -61,6 +61,7 @@
 
 void HD44780_Init(uint8_t rows);
 void HD44780_Clear();
+void HD44780_ClearRow(uint8_t row);
 void HD44780_Home();
 void HD44780_NoDisplay();
 void HD44780_Display();
