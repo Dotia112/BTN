@@ -382,10 +382,8 @@ void buttonTask(void *argument)
     	            if(current_stateSwitch == GPIO_PIN_RESET)
     	            {
 
-    	            	//osSemaphoreRelease(switchSemaphoreHandle);// семафор сбрасывается(увеличивается на единицу)
     	            	osSemaphoreRelease(switchSemaphoreHandle);
-    	            	//return;
-    	            }
+    	             }
 
     	            last_stateSwitch = current_stateSwitch;
     	        }
