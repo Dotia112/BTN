@@ -105,9 +105,6 @@ void LCDTaskSwitch(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-
-
 const osSemaphoreAttr_t buttonSemaphore_attributes = {
   .name = "buttonSemaphore"
 };
@@ -115,11 +112,9 @@ const osSemaphoreAttr_t buttonSemaphore_attributes = {
 const osSemaphoreAttr_t switchSemaphore_attributes = {
   .name = "switchSemaphore"
 };
-
 const osSemaphoreAttr_t blockSemaphore_attributes = {
   .name = "blockSemaphore"
 };
-
 //volatile uint8_t button_pressed = 0;
 /* USER CODE END 0 */
 
@@ -152,6 +147,9 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_I2C1_Init();
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0); // приоритет не выше configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
   /* USER CODE BEGIN 2 */
     HD44780_Init(2);
     HD44780_Clear();
@@ -188,7 +186,7 @@ int main(void)
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* creation of BTNTask */
-  BTNTaskHandle = osThreadNew(buttonTask, NULL, &BTNTask_attributes);
+ // BTNTaskHandle = osThreadNew(buttonTask, NULL, &BTNTask_attributes);
 
   /* creation of LCDTask */
 //LCDTaskHandle = osThreadNew(ledTask, NULL, &LCDTask_attributes);
@@ -284,11 +282,8 @@ static void MX_I2C1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN I2C1_Init 2 */
-
   /* USER CODE END I2C1_Init 2 */
-
 }
-
 /**
   * @brief GPIO Initialization Function
   * @param None
@@ -316,13 +311,13 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : PB14 */
     GPIO_InitStruct.Pin = GPIO_PIN_14;
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB15 */
   GPIO_InitStruct.Pin = GPIO_PIN_15;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
@@ -359,29 +354,35 @@ void StartDefaultTask(void *argument)
 * @retval None
 */
 /* USER CODE END Header_StartTask02 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    if(GPIO_Pin == GPIO_PIN_14) {
+        osSemaphoreRelease(buttonSemaphoreHandle); // или xSemaphoreGiveFromISR для чистого FreeRTOS
+    }
+    if(GPIO_Pin == GPIO_PIN_15) {
+        osSemaphoreRelease(switchSemaphoreHandle);
+    }
+}
+
 void buttonTask(void *argument)
 {
-
     uint8_t last_stateSwitch = GPIO_PIN_RESET; // Исходное состояние - кнопка отпущена
     uint8_t last_stateBTN = GPIO_PIN_RESET;
     //osSemaphoreRelease(switchSemaphoreHandle);
     //osSemaphoreAcquire(switchSemaphoreHandle, portMAX_DELAY);
     for(;;)
     {
-
         uint8_t current_stateBTN = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_14);
         // Устанавливаем курсор на нужную позицию (пример: 13-й столбец, 3-я строка)
-
 
         	// Обработка изменения состояния
         		uint8_t current_stateSwitch = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_15);
 
     	        if(current_stateSwitch != last_stateSwitch)
     	        {
-
     	            if(current_stateSwitch == GPIO_PIN_RESET)
     	            {
-
     	            	osSemaphoreRelease(switchSemaphoreHandle);
     	             }
 
@@ -389,7 +390,6 @@ void buttonTask(void *argument)
     	        }
 
     	        osDelay(50);
-
     	                // Обработка изменения состояния кнопки
     	                if(current_stateBTN != last_stateBTN)
     	                {
@@ -400,21 +400,15 @@ void buttonTask(void *argument)
 
     	                    last_stateBTN = current_stateBTN;
     	                }
-
-
-
         osDelay(50); // Задержка для стабильности опроса
     }
 }
-
 void LCDTaskSwitch(void *argument)
 {
 	for(;;)
 		{
-
 		    if(osSemaphoreAcquire(switchSemaphoreHandle, portMAX_DELAY) == osOK)
 		    {
-
 		          HD44780_ClearRow(1);
 		          HD44780_SetCursor(0,1);
 		          HD44780_PrintStr("Switch press");
@@ -422,17 +416,10 @@ void LCDTaskSwitch(void *argument)
 		    	   HD44780_SetCursor(0,1);
 		    	   HD44780_PrintStr("Switch don't press");
 		    	   osSemaphoreAcquire(switchSemaphoreHandle, 0);
-
-
 		    }
-
 		}
-
 		    osDelay(50);
-
 		}
-
-
 void ledTask(void *argument)
 {
     uint8_t led_on = 0;
@@ -466,7 +453,6 @@ void lcdTaskBTN(void *argument)
 {
 	for(;;)
 	{
-
 	    if(osSemaphoreAcquire(buttonSemaphoreHandle, portMAX_DELAY) == osOK)
 	    {
 	    	    //osSemaphoreRelease(blockSemaphoreHandle);
@@ -477,8 +463,6 @@ void lcdTaskBTN(void *argument)
                 HD44780_SetCursor(0,0);
 	            HD44780_PrintStr("BTN don't press");
 		    	osSemaphoreAcquire(buttonSemaphoreHandle, 0);
-
-
 	    }
 	    osDelay(50);
 
